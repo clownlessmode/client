@@ -4,6 +4,16 @@
 - **Package Manager**: bun
 - **Add-ons**: prettier, eslint, tailwindcss, sveltekit-adapter, mcp
 
+## Verification (обязательно)
+
+После изменений кода **всегда** проверяй результат перед ответом пользователю:
+
+1. `bun run check` — TypeScript / Svelte
+2. `bun run build` — production-сборка
+3. **Browser MCP** — открой затронутые страницы на `http://localhost:5173` и проверь через `browser_snapshot`, что UI рендерится без ошибок
+
+Подробности — в `.cursor/rules/verification.mdc`.
+
 ---
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
