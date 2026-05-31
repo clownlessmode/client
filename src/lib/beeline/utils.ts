@@ -125,6 +125,9 @@ export const parseApiError = async (response: Response) => {
 export const getTransactionChangeValue = (transaction: DetalizationTransaction) =>
 	transaction.balances?.[0]?.changeValue ?? 0;
 
+export const getTransactionKey = (transaction: DetalizationTransaction, index: number) =>
+	`${transaction.id}:${transaction.dateTime}:${index}`;
+
 export const splitTransactionsByDirection = (transactions: DetalizationTransaction[]) => {
 	const outgoing: DetalizationTransaction[] = [];
 	const incoming: DetalizationTransaction[] = [];

@@ -30,6 +30,7 @@
 		getCurrentDateTimeLocal,
 		getTransactionChangeValue,
 		getPaymentForTransaction,
+		getTransactionKey,
 		getTransactionSourceLabel,
 		isBeelineTransaction,
 		splitTransactionsByDirection,
@@ -567,7 +568,7 @@
 													<p class="text-muted-foreground">Списаний пока нет.</p>
 												{:else}
 													<div class="grid gap-3">
-														{#each outgoing.slice(0, visibleOutgoingCount) as transaction (transaction.id)}
+														{#each outgoing.slice(0, visibleOutgoingCount) as transaction, index (getTransactionKey(transaction, index))}
 															{@render transactionRow(transaction)}
 														{/each}
 													</div>
@@ -591,7 +592,7 @@
 													<p class="text-muted-foreground">Пополнений пока нет.</p>
 												{:else}
 													<div class="grid gap-3">
-														{#each incoming.slice(0, visibleIncomingCount) as transaction (transaction.id)}
+														{#each incoming.slice(0, visibleIncomingCount) as transaction, index (getTransactionKey(transaction, index))}
 															{@render transactionRow(transaction)}
 														{/each}
 													</div>
