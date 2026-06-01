@@ -5,7 +5,7 @@ import {
 	normalizeReceiverCard,
 	normalizeSimNumber,
 	parseApiError,
-	toRFC3339
+	toPaymentRFC3339
 } from '$lib/beeline/utils';
 import type { Config, Detalization, Payment, PaymentDirection } from '$lib/beeline/types';
 
@@ -106,7 +106,7 @@ export const actions = {
 		const formData = await request.formData();
 		const direction = normalizePaymentDirection(formData.get('direction')) ?? 'outgoing';
 		const amount = Number(formData.get('amount'));
-		const paidAt = toRFC3339(formData.get('paidAt'));
+		const paidAt = toPaymentRFC3339(formData.get('paidAt'));
 		const receiverCard =
 			direction === 'outgoing' ? normalizeReceiverCard(formData.get('receiverCard')) : '';
 
@@ -195,7 +195,7 @@ export const actions = {
 		}
 
 		if (paidAtValue !== null && paidAtValue !== '') {
-			const paidAt = toRFC3339(paidAtValue);
+			const paidAt = toPaymentRFC3339(paidAtValue);
 
 			if (!paidAt) {
 				return fail(400, { paymentError: 'Введите корректную дату и время операции' });

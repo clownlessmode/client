@@ -49,6 +49,72 @@ export const normalizePaymentDirection = (value: FormDataEntryValue | null): Pay
 	return null;
 };
 
+const PAYMENT_TIME_SHIFT_HOURS = 2;
+const PAYMENT_RFC3339_OFFSET = '+03:00';
+
+const parseNaiveDateTimeLocal = (value: string) => {
+	const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value.trim());
+
+	if (!match) {
+		return null;
+	}
+
+	const [, year, month, day, hour, minute] = match;
+
+	return {
+		year: Number(year),
+		month: Number(month),
+		day: Number(day),
+		hour: Number(hour),
+		minute: Number(minute)
+	};
+};
+
+const formatNaiveDateTimeLocal = (date: Date) => {
+	const pad = (part: number) => String(part).padStart(2, '0');
+
+	return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+};
+
+const shiftNaiveDateTimeLocal = (
+	value: string,
+	hours: number
+) => {
+	const parsed = parseNaiveDateTimeLocal(value);
+
+	if (!parsed) {
+		return null;
+	}
+
+	return formatNaiveDateTimeLocal(
+		new Date(
+			Date.UTC(
+				parsed.year,
+				parsed.month - 1,
+				parsed.day,
+				parsed.hour + hours,
+				parsed.minute,
+				0
+			)
+		)
+	);
+};
+
+/** datetime-local из формы → RFC3339 для API (ввод 17:24 → отправка 15:24+03:00). */
+export const toPaymentRFC3339 = (value: FormDataEntryValue | null) => {
+	const shifted = shiftNaiveDateTimeLocal(String(value ?? ''), -PAYMENT_TIME_SHIFT_HOURS);
+
+	if (!shifted) {
+		return null;
+	}
+
+	return `${shifted}:00${PAYMENT_RFC3339_OFFSET}`;
+};
+
+/** RFC3339 из API → datetime-local для формы (15:24+03:00 → 17:24). */
+export const toPaymentDateTimeLocal = (value: string) =>
+	shiftNaiveDateTimeLocal(value, PAYMENT_TIME_SHIFT_HOURS) ?? '';
+
 export const toRFC3339 = (value: FormDataEntryValue | null) => {
 	const time = String(value ?? '').trim();
 
@@ -84,6 +150,22 @@ export const toDateTimeLocal = (value: string) => {
 };
 
 export const getCurrentDateTimeLocal = () => toDateTimeLocal(new Date().toISOString());
+
+export const getCurrentPaymentDateTimeLocal = () => {
+	const parts = new Intl.DateTimeFormat('sv-SE', {
+		timeZone: 'Europe/Moscow',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit'
+	}).formatToParts(new Date());
+
+	const get = (type: Intl.DateTimeFormatPartTypes) =>
+		parts.find((part) => part.type === type)?.value ?? '00';
+
+	return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+};
 
 export const calcCommission = (amount: number) => Math.round(amount * 0.065 * 100) / 100;
 

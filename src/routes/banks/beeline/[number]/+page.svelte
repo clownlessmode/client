@@ -28,7 +28,7 @@
 		formatMoney,
 		formatSimNumber,
 		formatTransactionAmount,
-		getCurrentDateTimeLocal,
+		getCurrentPaymentDateTimeLocal,
 		getTransactionChangeValue,
 		getPaymentForTransaction,
 		getTransactionKey,
@@ -38,7 +38,7 @@
 		RECEIVER_CARD_HTML_PATTERN,
 		RECEIVER_CARD_TITLE,
 		splitTransactionsByDirection,
-		toDateTimeLocal
+		toPaymentDateTimeLocal
 	} from '$lib/beeline/utils';
 	import type { PageData } from './$types';
 	import { cn } from '$lib/utils';
@@ -56,7 +56,7 @@
 	let isCreatePaymentDialogOpen = $state(false);
 	let newPaymentDirection = $state<PaymentDirection>('outgoing');
 	let newPaymentAmount = $state('');
-	let newPaymentPaidAt = $state(getCurrentDateTimeLocal());
+	let newPaymentPaidAt = $state(getCurrentPaymentDateTimeLocal());
 	let historyTab = $state<HistoryTab>('outgoing');
 	let visibleOutgoingCount = $state(50);
 	let visibleIncomingCount = $state(50);
@@ -102,12 +102,12 @@
 	const resetCreatePaymentForm = () => {
 		newPaymentAmount = '';
 		newPaymentDirection = 'outgoing';
-		newPaymentPaidAt = getCurrentDateTimeLocal();
+		newPaymentPaidAt = getCurrentPaymentDateTimeLocal();
 	};
 
 	$effect(() => {
 		if (isCreatePaymentDialogOpen) {
-			newPaymentPaidAt = getCurrentDateTimeLocal();
+			newPaymentPaidAt = getCurrentPaymentDateTimeLocal();
 		}
 	});
 
@@ -487,7 +487,7 @@
 																				id={`paidAt-${payment.id}`}
 																				name="paidAt"
 																				type="datetime-local"
-																				value={toDateTimeLocal(payment.paidAt)}
+																				value={toPaymentDateTimeLocal(payment.paidAt)}
 																				required
 																			/>
 																		</div>
