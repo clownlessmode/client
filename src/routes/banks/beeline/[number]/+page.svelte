@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		Card,
@@ -33,6 +34,9 @@
 		getTransactionKey,
 		getTransactionSourceLabel,
 		isBeelineTransaction,
+		mergePaymentsIntoTransactions,
+		RECEIVER_CARD_HTML_PATTERN,
+		RECEIVER_CARD_TITLE,
 		splitTransactionsByDirection,
 		toDateTimeLocal
 	} from '$lib/beeline/utils';
@@ -52,6 +56,7 @@
 	let isCreatePaymentDialogOpen = $state(false);
 	let newPaymentDirection = $state<PaymentDirection>('outgoing');
 	let newPaymentAmount = $state('');
+	let newPaymentPaidAt = $state(getCurrentDateTimeLocal());
 	let historyTab = $state<HistoryTab>('outgoing');
 	let visibleOutgoingCount = $state(50);
 	let visibleIncomingCount = $state(50);
@@ -93,6 +98,26 @@
 
 		return startDate === endDate ? startDate : `${startDate} — ${endDate}`;
 	};
+
+	const resetCreatePaymentForm = () => {
+		newPaymentAmount = '';
+		newPaymentDirection = 'outgoing';
+		newPaymentPaidAt = getCurrentDateTimeLocal();
+	};
+
+	$effect(() => {
+		if (isCreatePaymentDialogOpen) {
+			newPaymentPaidAt = getCurrentDateTimeLocal();
+		}
+	});
+
+	$effect(() => {
+		const tab = page.url.searchParams.get('tab');
+
+		if (tab === 'incoming' || tab === 'outgoing') {
+			historyTab = tab;
+		}
+	});
 </script>
 
 <svelte:head>
@@ -218,19 +243,19 @@
 											return async ({ result, update }) => {
 												await update();
 
-												if (result.type === 'success') {
+												if (result.type === 'success' || result.type === 'redirect') {
 													isCreatePaymentDialogOpen = false;
-													newPaymentAmount = '';
-													newPaymentDirection = 'outgoing';
+													resetCreatePaymentForm();
 												}
 											};
 										}}
 									>
+										<input type="hidden" name="direction" value={newPaymentDirection} />
+
 										<div class="space-y-2">
 											<label class="text-sm font-medium" for="direction">Тип операции</label>
 											<select
 												id="direction"
-												name="direction"
 												class={selectClass}
 												bind:value={newPaymentDirection}
 												required
@@ -261,7 +286,7 @@
 													id="paidAt"
 													name="paidAt"
 													type="datetime-local"
-													value={getCurrentDateTimeLocal()}
+													bind:value={newPaymentPaidAt}
 													required
 												/>
 											</div>
@@ -276,7 +301,8 @@
 													id="receiverCard"
 													name="receiverCard"
 													placeholder="220094**0028"
-													pattern="\d{6}\*\*\d{4}"
+													pattern={RECEIVER_CARD_HTML_PATTERN}
+													title={RECEIVER_CARD_TITLE}
 													required
 												/>
 												<p class="text-xs text-muted-foreground">Формат: 6 цифр + ** + 4 цифры</p>
@@ -324,8 +350,13 @@
 								{#await data.payments}
 									<p class="text-muted-foreground">Загрузка истории...</p>
 								{:then payments}
+									{@const historyTransactions = mergePaymentsIntoTransactions(
+										detalizationResult.data?.data.transactions ?? [],
+										payments
+									)}
 									{@const { outgoing, incoming } = splitTransactionsByDirection(
-										detalizationResult.data?.data.transactions ?? []
+										historyTransactions,
+										payments
 									)}
 
 									{#snippet transactionRow(transaction: DetalizationTransaction)}
@@ -474,7 +505,8 @@
 																				id={`receiverCard-${payment.id}`}
 																				name="receiverCard"
 																				value={payment.receiverCard ?? ''}
-																				pattern="\d{6}\*\*\d{4}"
+																				pattern={RECEIVER_CARD_HTML_PATTERN}
+																				title={RECEIVER_CARD_TITLE}
 																			/>
 																		</div>
 																	{/if}

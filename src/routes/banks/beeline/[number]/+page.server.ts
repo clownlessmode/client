@@ -151,7 +151,8 @@ export const actions = {
 			});
 		}
 
-		redirect(303, `/banks/beeline/${number}`);
+		const tab = direction === 'incoming' ? '?tab=incoming' : '';
+		redirect(303, `/banks/beeline/${number}${tab}`);
 	},
 	updatePayment: async ({ fetch, request, params }) => {
 		const number = normalizeSimNumber(params.number);

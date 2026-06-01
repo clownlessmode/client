@@ -2,6 +2,9 @@ import type { DetalizationTransaction, Payment, PaymentDirection } from './types
 
 export const BEELINE_API_BASE = 'http://localhost:8080/banks/beeline';
 
+export const RECEIVER_CARD_HTML_PATTERN = '[0-9]{6}[*][*][0-9]{4}';
+export const RECEIVER_CARD_TITLE = 'Формат: 220094**0028 (6 цифр + ** + 4 цифры)';
+
 export const normalizeSimNumber = (value: FormDataEntryValue | null) => {
 	const digits = String(value ?? '').replace(/\D/g, '');
 
@@ -25,7 +28,9 @@ export const formatSimNumber = (number: string) => {
 };
 
 export const normalizeReceiverCard = (value: FormDataEntryValue | null) => {
-	const card = String(value ?? '').replace(/\s+/g, '');
+	const card = String(value ?? '')
+		.replace(/\s+/g, '')
+		.replace(/[＊∗]/g, '*');
 
 	if (!/^\d{6}\*\*\d{4}$/.test(card)) {
 		return null;
@@ -128,12 +133,60 @@ export const getTransactionChangeValue = (transaction: DetalizationTransaction) 
 export const getTransactionKey = (transaction: DetalizationTransaction, index: number) =>
 	`${transaction.id}:${transaction.dateTime}:${index}`;
 
-export const splitTransactionsByDirection = (transactions: DetalizationTransaction[]) => {
+export const paymentToTransaction = (payment: Payment): DetalizationTransaction => ({
+	id: payment.id,
+	source: 'payment',
+	dateTime: payment.paidAt,
+	name: payment.direction === 'incoming' ? 'Пополнение' : 'Мобильная коммерция',
+	balances: [
+		{
+			changeValue: payment.direction === 'incoming' ? payment.amount : -payment.total
+		}
+	]
+});
+
+export const mergePaymentsIntoTransactions = (
+	transactions: DetalizationTransaction[],
+	payments: Payment[]
+) => {
+	const ids = new Set(transactions.map((transaction) => transaction.id));
+	const merged = [...transactions];
+
+	for (const payment of payments) {
+		if (!ids.has(payment.id)) {
+			merged.push(paymentToTransaction(payment));
+		}
+	}
+
+	return merged.sort(
+		(a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
+	);
+};
+
+export const getPaymentForTransaction = (
+	transaction: DetalizationTransaction,
+	payments: Payment[]
+) => payments.find((payment) => payment.id === transaction.id) ?? null;
+
+export const splitTransactionsByDirection = (
+	transactions: DetalizationTransaction[],
+	payments: Payment[] = []
+) => {
 	const outgoing: DetalizationTransaction[] = [];
 	const incoming: DetalizationTransaction[] = [];
 
 	for (const transaction of transactions) {
+		const payment = getPaymentForTransaction(transaction, payments);
 		const changeValue = getTransactionChangeValue(transaction);
+
+		if (payment) {
+			if (payment.direction === 'incoming') {
+				incoming.push(transaction);
+			} else {
+				outgoing.push(transaction);
+			}
+			continue;
+		}
 
 		if (changeValue === 0) {
 			continue;
@@ -154,11 +207,6 @@ export const formatTransactionAmount = (changeValue: number) => {
 
 	return `${prefix}${formatMoney(Math.abs(changeValue))}`;
 };
-
-export const getPaymentForTransaction = (
-	transaction: DetalizationTransaction,
-	payments: Payment[]
-) => payments.find((payment) => payment.id === transaction.id) ?? null;
 
 export const isBeelineTransaction = (
 	transaction: DetalizationTransaction,
