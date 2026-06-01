@@ -49,7 +49,7 @@ export const normalizePaymentDirection = (value: FormDataEntryValue | null): Pay
 	return null;
 };
 
-const PAYMENT_TIME_SHIFT_HOURS = 2;
+const PAYMENT_TIME_SHIFT_HOURS = 3;
 const PAYMENT_RFC3339_OFFSET = '+03:00';
 
 const parseNaiveDateTimeLocal = (value: string) => {
@@ -100,7 +100,7 @@ const shiftNaiveDateTimeLocal = (
 	);
 };
 
-/** datetime-local из формы → RFC3339 для API (ввод 17:24 → отправка 15:24+03:00). */
+/** datetime-local из формы → RFC3339 для API (ввод 17:24 → отправка 14:24+03:00). */
 export const toPaymentRFC3339 = (value: FormDataEntryValue | null) => {
 	const shifted = shiftNaiveDateTimeLocal(String(value ?? ''), -PAYMENT_TIME_SHIFT_HOURS);
 
@@ -111,7 +111,7 @@ export const toPaymentRFC3339 = (value: FormDataEntryValue | null) => {
 	return `${shifted}:00${PAYMENT_RFC3339_OFFSET}`;
 };
 
-/** RFC3339 из API → datetime-local для формы (15:24+03:00 → 17:24). */
+/** RFC3339 из API → datetime-local для формы (14:24+03:00 → 17:24). */
 export const toPaymentDateTimeLocal = (value: string) =>
 	shiftNaiveDateTimeLocal(value, PAYMENT_TIME_SHIFT_HOURS) ?? '';
 
