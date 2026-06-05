@@ -79,7 +79,7 @@ const formatNaiveDateTimeLocal = (parts: {
 	return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
 };
 
-/** datetime-local из формы → RFC3339 для API без сдвигов (22:17 → 22:17:00Z). */
+/** datetime-local из формы → RFC3339 для API (22:17 → 22:17:00+03:00). */
 export const toPaymentRFC3339 = (value: FormDataEntryValue | null) => {
 	const parsed = parseNaiveDateTimeLocal(String(value ?? ''));
 
@@ -87,7 +87,7 @@ export const toPaymentRFC3339 = (value: FormDataEntryValue | null) => {
 		return null;
 	}
 
-	return `${formatNaiveDateTimeLocal(parsed)}:00Z`;
+	return `${formatNaiveDateTimeLocal(parsed)}:00+03:00`;
 };
 
 /** RFC3339 из API → datetime-local для формы без сдвигов (22:17:00Z → 22:17). */
@@ -231,12 +231,34 @@ export const paymentToTransaction = (payment: Payment): DetalizationTransaction 
 	]
 });
 
+export const getPaymentForTransaction = (
+	transaction: DetalizationTransaction,
+	payments: Payment[]
+) => payments.find((payment) => payment.id === transaction.id) ?? null;
+
+export const getTransactionDisplayDateTime = (
+	transaction: DetalizationTransaction,
+	payments: Payment[]
+) => getPaymentForTransaction(transaction, payments)?.paidAt ?? transaction.dateTime;
+
 export const mergePaymentsIntoTransactions = (
 	transactions: DetalizationTransaction[],
 	payments: Payment[]
 ) => {
-	const ids = new Set(transactions.map((transaction) => transaction.id));
-	const merged = [...transactions];
+	const paymentById = new Map(payments.map((payment) => [payment.id, payment]));
+	const merged = transactions.map((transaction) => {
+		const payment = paymentById.get(transaction.id);
+
+		if (!payment) {
+			return transaction;
+		}
+
+		return {
+			...transaction,
+			dateTime: payment.paidAt
+		};
+	});
+	const ids = new Set(merged.map((transaction) => transaction.id));
 
 	for (const payment of payments) {
 		if (!ids.has(payment.id)) {
@@ -248,11 +270,6 @@ export const mergePaymentsIntoTransactions = (
 		(a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
 	);
 };
-
-export const getPaymentForTransaction = (
-	transaction: DetalizationTransaction,
-	payments: Payment[]
-) => payments.find((payment) => payment.id === transaction.id) ?? null;
 
 export const splitTransactionsByDirection = (
 	transactions: DetalizationTransaction[],

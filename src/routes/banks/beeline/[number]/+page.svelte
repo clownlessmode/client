@@ -32,6 +32,7 @@
 		getCurrentPaymentDateTimeLocal,
 		getTransactionChangeValue,
 		getPaymentForTransaction,
+		getTransactionDisplayDateTime,
 		getTransactionKey,
 		getTransactionSourceLabel,
 		isBeelineTransaction,
@@ -383,7 +384,7 @@
 															<span
 																class="rounded-full bg-background px-2 py-1 text-xs text-muted-foreground"
 															>
-																{formatPaymentDate(transaction.dateTime)}
+																{formatPaymentDate(getTransactionDisplayDateTime(transaction, payments))}
 															</span>
 														</div>
 													</div>
