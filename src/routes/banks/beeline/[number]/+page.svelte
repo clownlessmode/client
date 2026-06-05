@@ -26,6 +26,7 @@
 		capitalizeFirst,
 		formatDate,
 		formatMoney,
+		formatPaymentDate,
 		formatSimNumber,
 		formatTransactionAmount,
 		getCurrentPaymentDateTimeLocal,
@@ -382,7 +383,7 @@
 															<span
 																class="rounded-full bg-background px-2 py-1 text-xs text-muted-foreground"
 															>
-																{formatDate(transaction.dateTime)}
+																{formatPaymentDate(transaction.dateTime)}
 															</span>
 														</div>
 													</div>

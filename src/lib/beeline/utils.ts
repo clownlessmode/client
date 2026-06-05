@@ -168,6 +168,15 @@ export const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
 	minute: '2-digit'
 });
 
+const paymentDateFormatter = new Intl.DateTimeFormat('ru-RU', {
+	day: '2-digit',
+	month: 'short',
+	year: 'numeric',
+	hour: '2-digit',
+	minute: '2-digit',
+	timeZone: 'UTC'
+});
+
 export const formatMoney = (amount: number | null) =>
 	amount === null ? '—' : currencyFormatter.format(amount);
 
@@ -179,6 +188,19 @@ export const formatDate = (value: string) => {
 	}
 
 	return dateFormatter.format(date);
+};
+
+/** Дата/время платежа — как в строке API, без сдвига таймзоны (17:22 → 17:22). */
+export const formatPaymentDate = (value: string) => {
+	const parsed = parseNaiveDateTimeLocal(value);
+
+	if (!parsed) {
+		return formatDate(value);
+	}
+
+	return paymentDateFormatter.format(
+		new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute))
+	);
 };
 
 export const parseApiError = async (response: Response) => {
