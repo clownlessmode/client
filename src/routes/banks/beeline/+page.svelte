@@ -143,16 +143,14 @@
 							class="absolute top-3 right-3 z-10 sm:top-4 sm:right-4"
 							method="POST"
 							action="?/deleteSim"
-							use:enhance
-							onsubmit={(event) => {
-								event.stopPropagation();
-
+							onsubmit={(event) => event.stopPropagation()}
+							use:enhance={({ cancel }) => {
 								if (
 									!confirm(
 										`Удалить SIM ${formatSimNumber(sim.number)} и всю историю платежей?`
 									)
 								) {
-									event.preventDefault();
+									cancel();
 								}
 							}}
 						>

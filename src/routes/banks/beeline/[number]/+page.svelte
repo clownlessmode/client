@@ -144,14 +144,13 @@
 			<form
 				method="POST"
 				action="?/deleteSim"
-				use:enhance
-				onsubmit={(event) => {
+				use:enhance={({ cancel }) => {
 					if (
 						!confirm(
 							`Удалить SIM ${formatSimNumber(data.number)} и всю историю платежей?`
 						)
 					) {
-						event.preventDefault();
+						cancel();
 					}
 				}}
 			>
@@ -523,10 +522,9 @@
 														<form
 															method="POST"
 															action="?/deletePayment"
-															use:enhance
-															onsubmit={(event) => {
+															use:enhance={({ cancel }) => {
 																if (!confirm('Удалить этот платёж?')) {
-																	event.preventDefault();
+																	cancel();
 																}
 															}}
 														>
@@ -537,14 +535,13 @@
 														<form
 															method="POST"
 															action="?/hideTransaction"
-															use:enhance
-															onsubmit={(event) => {
+															use:enhance={({ cancel }) => {
 																if (
 																	!confirm(
 																		'Скрыть эту операцию Билайн? Она не вернётся даже после обновления из приложения.'
 																	)
 																) {
-																	event.preventDefault();
+																	cancel();
 																}
 															}}
 														>
