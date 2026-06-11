@@ -42,11 +42,41 @@ export const normalizeReceiverCard = (value: FormDataEntryValue | null) => {
 export const normalizePaymentDirection = (value: FormDataEntryValue | null): PaymentDirection | null => {
 	const direction = String(value ?? '').trim();
 
-	if (direction === 'outgoing' || direction === 'incoming') {
+	if (direction === 'outgoing' || direction === 'incoming' || direction === 'balance_return') {
 		return direction;
 	}
 
 	return null;
+};
+
+export const isOutgoingPaymentDirection = (direction: PaymentDirection) => direction === 'outgoing';
+
+export const isIncomingLikePaymentDirection = (direction: PaymentDirection) =>
+	direction === 'incoming' || direction === 'balance_return';
+
+export const getPaymentTransactionName = (direction: PaymentDirection) => {
+	switch (direction) {
+		case 'incoming':
+			return 'Пополнение';
+		case 'balance_return':
+			return 'возврат на личный баланс';
+		default:
+			return 'Мобильная коммерция';
+	}
+};
+
+export const getPaymentTransactionDescription = (direction: PaymentDirection) =>
+	direction === 'balance_return' ? 'основной баланс' : null;
+
+export const getPaymentDirectionLabel = (direction: PaymentDirection) => {
+	switch (direction) {
+		case 'outgoing':
+			return 'Списание (outgoing)';
+		case 'incoming':
+			return 'Пополнение (incoming)';
+		case 'balance_return':
+			return 'Возврат на личный баланс';
+	}
 };
 
 const parseNaiveDateTimeLocal = (value: string) => {
@@ -152,7 +182,7 @@ export const getCurrentPaymentDateTimeLocal = () => {
 export const calcCommission = (amount: number) => Math.round(amount * 0.065 * 100) / 100;
 
 export const calcTotal = (amount: number, direction: PaymentDirection) =>
-	direction === 'outgoing' ? amount + calcCommission(amount) : amount;
+	isOutgoingPaymentDirection(direction) ? amount + calcCommission(amount) : amount;
 
 export const currencyFormatter = new Intl.NumberFormat('ru-RU', {
 	style: 'currency',
@@ -223,10 +253,12 @@ export const paymentToTransaction = (payment: Payment): DetalizationTransaction 
 	id: payment.id,
 	source: 'payment',
 	dateTime: payment.paidAt,
-	name: payment.direction === 'incoming' ? 'Пополнение' : 'Мобильная коммерция',
+	name: getPaymentTransactionName(payment.direction),
 	balances: [
 		{
-			changeValue: payment.direction === 'incoming' ? payment.amount : -payment.total
+			changeValue: isIncomingLikePaymentDirection(payment.direction)
+				? payment.amount
+				: -payment.total
 		}
 	]
 });
@@ -255,7 +287,8 @@ export const mergePaymentsIntoTransactions = (
 
 		return {
 			...transaction,
-			dateTime: payment.paidAt
+			dateTime: payment.paidAt,
+			name: getPaymentTransactionName(payment.direction)
 		};
 	});
 	const ids = new Set(merged.map((transaction) => transaction.id));
@@ -283,7 +316,7 @@ export const splitTransactionsByDirection = (
 		const changeValue = getTransactionChangeValue(transaction);
 
 		if (payment) {
-			if (payment.direction === 'incoming') {
+			if (isIncomingLikePaymentDirection(payment.direction)) {
 				incoming.push(transaction);
 			} else {
 				outgoing.push(transaction);

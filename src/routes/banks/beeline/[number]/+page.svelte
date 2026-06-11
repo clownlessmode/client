@@ -30,11 +30,14 @@
 		formatSimNumber,
 		formatTransactionAmount,
 		getCurrentPaymentDateTimeLocal,
-		getTransactionChangeValue,
+		getPaymentDirectionLabel,
 		getPaymentForTransaction,
+		getPaymentTransactionDescription,
+		getTransactionChangeValue,
 		getTransactionDisplayDateTime,
 		getTransactionKey,
 		getTransactionSourceLabel,
+		isOutgoingPaymentDirection,
 		isBeelineTransaction,
 		mergePaymentsIntoTransactions,
 		RECEIVER_CARD_HTML_PATTERN,
@@ -68,12 +71,12 @@
 
 	const previewAmount = $derived(Number(newPaymentAmount));
 	const previewCommission = $derived(
-		newPaymentDirection === 'outgoing' && Number.isFinite(previewAmount)
+		isOutgoingPaymentDirection(newPaymentDirection) && Number.isFinite(previewAmount)
 			? calcCommission(previewAmount)
 			: 0
 	);
 	const previewTotal = $derived(
-		newPaymentDirection === 'outgoing' && Number.isFinite(previewAmount)
+		isOutgoingPaymentDirection(newPaymentDirection) && Number.isFinite(previewAmount)
 			? calcTotal(previewAmount, 'outgoing')
 			: Number.isFinite(previewAmount)
 				? previewAmount
@@ -84,11 +87,18 @@
 		payment.source === 'payment_flow' ? 'Авто' : 'Вручную';
 
 	const getPaymentSubtitle = (payment: Payment) => {
-		if (payment.direction !== 'outgoing') {
+		const description = getPaymentTransactionDescription(payment.direction);
+
+		if (description) {
+			return { description, commission: null, total: null };
+		}
+
+		if (!isOutgoingPaymentDirection(payment.direction)) {
 			return null;
 		}
 
 		return {
+			description: null,
 			commission: formatMoney(payment.commission),
 			total: formatMoney(payment.total)
 		};
@@ -233,6 +243,7 @@
 										<DialogTitle>Добавить платёж</DialogTitle>
 										<DialogDescription>
 											Списание — мобильная коммерция на карту. Пополнение — зачисление на баланс SIM.
+											Возврат — на личный баланс без карты.
 										</DialogDescription>
 									</DialogHeader>
 
@@ -261,8 +272,9 @@
 												bind:value={newPaymentDirection}
 												required
 											>
-												<option value="outgoing">Списание (outgoing)</option>
-												<option value="incoming">Пополнение (incoming)</option>
+												<option value="outgoing">{getPaymentDirectionLabel('outgoing')}</option>
+												<option value="incoming">{getPaymentDirectionLabel('incoming')}</option>
+												<option value="balance_return">{getPaymentDirectionLabel('balance_return')}</option>
 											</select>
 										</div>
 
@@ -273,9 +285,9 @@
 													id="amount"
 													name="amount"
 													type="number"
-													min={newPaymentDirection === 'outgoing' ? 924 : 1}
+													min={isOutgoingPaymentDirection(newPaymentDirection) ? 924 : 1}
 													step="1"
-													placeholder={newPaymentDirection === 'outgoing' ? '13000' : '5000'}
+													placeholder={isOutgoingPaymentDirection(newPaymentDirection) ? '13000' : '5000'}
 													bind:value={newPaymentAmount}
 													required
 												/>
@@ -293,7 +305,7 @@
 											</div>
 										</div>
 
-										{#if newPaymentDirection === 'outgoing'}
+										{#if isOutgoingPaymentDirection(newPaymentDirection)}
 											<div class="space-y-2">
 												<label class="text-sm font-medium" for="receiverCard">
 													Карта получателя
@@ -400,7 +412,10 @@
 												<div class="space-y-0.5 text-sm text-muted-foreground">
 													{#if payment}
 														<p>{getPaymentSourceLabel(payment)}</p>
-														{#if paymentDetails}
+														{#if paymentDetails?.description}
+															<p>{paymentDetails.description}</p>
+														{/if}
+														{#if paymentDetails?.commission}
 															<p>Комиссия {paymentDetails.commission}</p>
 															<p>Итого {paymentDetails.total}</p>
 														{/if}
@@ -453,8 +468,9 @@
 																			class={selectClass}
 																			value={payment.direction}
 																		>
-																			<option value="outgoing">Списание (outgoing)</option>
-																			<option value="incoming">Пополнение (incoming)</option>
+																			<option value="outgoing">{getPaymentDirectionLabel('outgoing')}</option>
+																			<option value="incoming">{getPaymentDirectionLabel('incoming')}</option>
+																			<option value="balance_return">{getPaymentDirectionLabel('balance_return')}</option>
 																		</select>
 																	</div>
 
@@ -470,7 +486,7 @@
 																				id={`amount-${payment.id}`}
 																				name="amount"
 																				type="number"
-																				min={payment.direction === 'outgoing' ? 924 : 1}
+																				min={isOutgoingPaymentDirection(payment.direction) ? 924 : 1}
 																				step="1"
 																				value={payment.amount}
 																				required
@@ -494,7 +510,7 @@
 																		</div>
 																	</div>
 
-																	{#if payment.direction === 'outgoing' || payment.receiverCard}
+																	{#if isOutgoingPaymentDirection(payment.direction) || payment.receiverCard}
 																		<div class="space-y-2">
 																			<label
 																				class="text-sm font-medium"

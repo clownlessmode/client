@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import {
 	BEELINE_API_BASE,
+	isIncomingLikePaymentDirection,
+	isOutgoingPaymentDirection,
 	normalizePaymentDirection,
 	normalizeReceiverCard,
 	normalizeSimNumber,
@@ -16,11 +18,11 @@ const validatePaymentAmount = (amount: number, direction: PaymentDirection) => {
 		return 'Введите корректную сумму';
 	}
 
-	if (direction === 'outgoing' && amount < MIN_OUTGOING_AMOUNT) {
+	if (isOutgoingPaymentDirection(direction) && amount < MIN_OUTGOING_AMOUNT) {
 		return `Минимальная сумма для списания — ${MIN_OUTGOING_AMOUNT} ₽`;
 	}
 
-	if (direction === 'incoming' && amount <= 0) {
+	if (isIncomingLikePaymentDirection(direction) && amount <= 0) {
 		return 'Сумма пополнения должна быть больше 0';
 	}
 
@@ -108,7 +110,7 @@ export const actions = {
 		const amount = Number(formData.get('amount'));
 		const paidAt = toPaymentRFC3339(formData.get('paidAt'));
 		const receiverCard =
-			direction === 'outgoing' ? normalizeReceiverCard(formData.get('receiverCard')) : '';
+			isOutgoingPaymentDirection(direction) ? normalizeReceiverCard(formData.get('receiverCard')) : '';
 
 		const amountError = validatePaymentAmount(amount, direction);
 
@@ -120,7 +122,7 @@ export const actions = {
 			return fail(400, { paymentError: 'Введите корректную дату и время операции' });
 		}
 
-		if (direction === 'outgoing' && !receiverCard) {
+		if (isOutgoingPaymentDirection(direction) && !receiverCard) {
 			return fail(400, {
 				paymentError: 'Карта получателя должна быть в формате 220094**0028'
 			});
@@ -132,7 +134,7 @@ export const actions = {
 			paidAt
 		};
 
-		if (direction === 'outgoing' && receiverCard) {
+		if (isOutgoingPaymentDirection(direction) && receiverCard) {
 			payload.receiverCard = receiverCard;
 		}
 
@@ -151,7 +153,7 @@ export const actions = {
 			});
 		}
 
-		const tab = direction === 'incoming' ? '?tab=incoming' : '';
+		const tab = isIncomingLikePaymentDirection(direction) ? '?tab=incoming' : '';
 		redirect(303, `/banks/beeline/${number}${tab}`);
 	},
 	updatePayment: async ({ fetch, request, params }) => {
@@ -207,7 +209,7 @@ export const actions = {
 		if (receiverCardValue !== null && receiverCardValue !== '') {
 			const receiverCard = normalizeReceiverCard(receiverCardValue);
 
-			if (!receiverCard && (direction === 'outgoing' || !direction)) {
+			if (!receiverCard && (direction ? isOutgoingPaymentDirection(direction) : true)) {
 				return fail(400, {
 					paymentError: 'Карта получателя должна быть в формате 220094**0028'
 				});

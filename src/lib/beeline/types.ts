@@ -12,7 +12,7 @@ export interface Config {
 	updatedAt: string;
 }
 
-export type PaymentDirection = 'outgoing' | 'incoming';
+export type PaymentDirection = 'outgoing' | 'incoming' | 'balance_return';
 export type PaymentSource = 'manual' | 'payment_flow';
 
 export interface Payment {
